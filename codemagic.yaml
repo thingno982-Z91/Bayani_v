@@ -1,0 +1,52 @@
+workflows:
+  android-release:
+    name: Android Release Build
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+      vars:
+        PACKAGE_NAME: "com.kushymh.finance_statement_app"
+      # This project currently signs release builds with the DEBUG keystore
+      # (see android/README_SIGNING.md and android/app/build.gradle).
+      # That is fine for testing/EWC-style submissions, but Google Play
+      # requires a real upload keystore. Once you have one, uncomment below
+      # and add the keystore in Codemagic > Team settings > Code signing identities:
+      # android_signing:
+      #   - your_keystore_reference
+    scripts:
+      - name: Ensure clean Gradle wrapper restore
+        script: |
+          # If gradlew/gradlew.bat exist but gradle-wrapper.jar is missing or
+          # corrupted, the Flutter tool will NOT auto-heal it (known Flutter
+          # tooling limitation - see flutter/flutter#17280). It only restores
+          # the wrapper when ALL THREE files (gradlew, gradlew.bat,
+          # gradle-wrapper.jar) are absent together. So we remove all three
+          # here; `flutter build apk` below then recreates them fresh from
+          # Flutter's own bundled copy - no manual/hand-built jar involved.
+          rm -f android/gradlew android/gradlew.bat android/gradle/wrapper/gradle-wrapper.jar
+
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+
+      - name: Build APK
+        script: |
+          flutter build apk --release
+
+      - name: Build App Bundle
+        script: |
+          flutter build appbundle --release
+
+    artifacts:
+      - build/app/outputs/**/*.apk
+      - build/app/outputs/**/*.aab
+      - build/app/outputs/**/mapping.txt
+
+    publishing:
+      email:
+        recipients:
+          - A.kushymh@gmail.com
+        notify:
+          success: true
+          failure: true
